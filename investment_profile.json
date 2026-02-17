@@ -1,0 +1,16 @@
+{
+  "risk_tolerance": "High",
+  "investment_horizon": "5-10 years",
+  "preferred_sectors": [
+    "\ud83d\ude80 Space Technology",
+    "\ud83e\udd16 Robotics & Automation",
+    "\ud83c\udfe5 Healthcare / Biotech"
+  ],
+  "stock_size_preference": "Small Cap ($300M-$2B)",
+  "geographic_focus": "US",
+  "max_position_size_pct": 25,
+  "dividend_preference": false,
+  "philosophy": "",
+  "admired_stocks": "SpaceX, Anduril, Rocket Lab",
+  "last_updated": "2026-02-17T13:50:54.743886"
+}

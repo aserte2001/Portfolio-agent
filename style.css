@@ -1,0 +1,717 @@
+/* ═══════════════════════════════════════════════════════════════
+   MODERN FINTECH TILE DASHBOARD – Portfolio Agent
+   Inspired by Notion / Linear / Trade Republic
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Global Reset ────────────────────────────────────────────── */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+}
+
+html { scroll-behavior: smooth !important; }
+
+/* ── App Background ──────────────────────────────────────────── */
+.stApp {
+    background: linear-gradient(135deg, #0A0E27 0%, #111535 50%, #151B3B 100%) !important;
+}
+
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    background: transparent !important;
+}
+
+.main .block-container {
+    padding: 1.5rem 2.5rem !important;
+    max-width: 1400px !important;
+}
+
+/* ── Header bar ──────────────────────────────────────────────── */
+header[data-testid="stHeader"] {
+    background: rgba(10, 14, 39, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: #070B1E !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: #070B1E !important;
+}
+
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] li {
+    color: #8B93B0 !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #FFFFFF !important;
+}
+
+[data-testid="stSidebar"] hr {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-testid="stSidebar"] .stRadio label p {
+    color: #C0C8E0 !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+/* ── Typography ──────────────────────────────────────────────── */
+h1 { color: #FFFFFF !important; font-weight: 700 !important; }
+h2 { color: #FFFFFF !important; font-weight: 600 !important; }
+h3 {
+    color: #8B93B0 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+}
+p, li, span { color: #C0C8E0 !important; }
+label { color: #C0C8E0 !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TILE SYSTEM – Core Dashboard Tiles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Main Tile ───────────────────────────────────────────────── */
+.tile {
+    background: rgba(30, 39, 73, 0.55);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: tileIn 0.4s ease-out;
+}
+
+.tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(91, 127, 255, 0.12);
+    border-color: rgba(91, 127, 255, 0.2);
+}
+
+/* ── Tile Header ─────────────────────────────────────────────── */
+.tile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tile-header .tile-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.tile-header .tile-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
+    margin: 0 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+/* ── Tile Big Number ─────────────────────────────────────────── */
+.tile-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.tile-value.green { color: #00D395 !important; text-shadow: 0 0 24px rgba(0, 211, 149, 0.3); }
+.tile-value.red   { color: #FF3B69 !important; text-shadow: 0 0 24px rgba(255, 59, 105, 0.3); }
+.tile-value.blue  { color: #5B7FFF !important; text-shadow: 0 0 24px rgba(91, 127, 255, 0.3); }
+.tile-value.purple { color: #9D5FFF !important; text-shadow: 0 0 24px rgba(157, 95, 255, 0.3); }
+
+/* ── Tile Label ──────────────────────────────────────────────── */
+.tile-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8B93B0 !important;
+    margin-bottom: 8px;
+}
+
+/* ── Tile Subtitle ───────────────────────────────────────────── */
+.tile-sub {
+    font-size: 13px !important;
+    color: #6B7394 !important;
+    margin-top: 4px;
+}
+
+/* ── Tile Glow Variants ──────────────────────────────────────── */
+.tile.tile-glow-green {
+    border-color: rgba(0, 211, 149, 0.15);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(0, 211, 149, 0.1);
+}
+.tile.tile-glow-green:hover {
+    box-shadow: 0 12px 40px rgba(0, 211, 149, 0.12);
+    border-color: rgba(0, 211, 149, 0.25);
+}
+
+.tile.tile-glow-red {
+    border-color: rgba(255, 59, 105, 0.15);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 59, 105, 0.1);
+}
+.tile.tile-glow-red:hover {
+    box-shadow: 0 12px 40px rgba(255, 59, 105, 0.12);
+    border-color: rgba(255, 59, 105, 0.25);
+}
+
+.tile.tile-glow-blue {
+    border-color: rgba(91, 127, 255, 0.15);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(91, 127, 255, 0.1);
+}
+.tile.tile-glow-blue:hover {
+    box-shadow: 0 12px 40px rgba(91, 127, 255, 0.12);
+    border-color: rgba(91, 127, 255, 0.25);
+}
+
+.tile.tile-glow-purple {
+    border-color: rgba(157, 95, 255, 0.15);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(157, 95, 255, 0.1);
+}
+.tile.tile-glow-purple:hover {
+    box-shadow: 0 12px 40px rgba(157, 95, 255, 0.12);
+    border-color: rgba(157, 95, 255, 0.25);
+}
+
+/* ── Holding Tile (Portfolio) ────────────────────────────────── */
+.holding-tile {
+    background: rgba(30, 39, 73, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: tileIn 0.4s ease-out;
+}
+
+.holding-tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 32px rgba(91, 127, 255, 0.1);
+    border-color: rgba(91, 127, 255, 0.15);
+}
+
+.holding-tile .ticker {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 2px;
+}
+
+.holding-tile .shares {
+    font-size: 12px;
+    color: #8B93B0;
+    margin-bottom: 12px;
+}
+
+.holding-tile .price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.holding-tile .current-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.holding-tile .return-pct {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 8px;
+}
+
+.holding-tile .return-pct.pos {
+    color: #00D395;
+    background: rgba(0, 211, 149, 0.12);
+}
+
+.holding-tile .return-pct.neg {
+    color: #FF3B69;
+    background: rgba(255, 59, 105, 0.12);
+}
+
+.holding-tile .detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6B7394;
+    margin-top: 6px;
+}
+
+/* ── Status Indicator ────────────────────────────────────────── */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+}
+.status-dot.live { background: #00D395; }
+.status-dot.loading { background: #FFB800; }
+.status-dot.error { background: #FF3B69; }
+
+/* ── Page Header ─────────────────────────────────────────────── */
+.page-header {
+    text-align: center;
+    padding: 16px 0 12px 0;
+}
+.page-header h1 {
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
+    margin-bottom: 4px;
+}
+.page-header p {
+    color: #8B93B0 !important;
+    font-size: 0.9rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UI COMPONENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.stButton > button,
+button[kind="primary"],
+.stFormSubmitButton > button {
+    background: linear-gradient(135deg, #5B7FFF 0%, #4A6BFF 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 1.6rem !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 16px rgba(91, 127, 255, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton > button:hover,
+button[kind="primary"]:hover,
+.stFormSubmitButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 24px rgba(91, 127, 255, 0.5) !important;
+    color: #FFFFFF !important;
+    background: linear-gradient(135deg, #6B8FFF 0%, #5A7BFF 100%) !important;
+}
+
+.stButton > button:active,
+.stFormSubmitButton > button:active {
+    transform: translateY(0) !important;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input {
+    background: rgba(30, 39, 73, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    color: #FFFFFF !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 14px !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus {
+    border-color: #5B7FFF !important;
+    box-shadow: 0 0 0 3px rgba(91, 127, 255, 0.15) !important;
+}
+
+.stTextInput > div > div > input::placeholder {
+    color: #4A5270 !important;
+}
+
+/* ── Textarea ────────────────────────────────────────────────── */
+.stTextArea textarea {
+    background: rgba(30, 39, 73, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    color: #FFFFFF !important;
+    font-size: 14px !important;
+}
+
+.stTextArea textarea:focus {
+    border-color: #5B7FFF !important;
+    box-shadow: 0 0 0 3px rgba(91, 127, 255, 0.15) !important;
+}
+
+/* ── Selects ─────────────────────────────────────────────────── */
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    background: rgba(30, 39, 73, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    color: #FFFFFF !important;
+}
+
+.stSelectbox [data-baseweb="select"] > div,
+.stMultiSelect [data-baseweb="select"] > div {
+    background: rgba(30, 39, 73, 0.8) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-baseweb="popover"] {
+    background: #1A2040 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+}
+
+[data-baseweb="popover"] li {
+    color: #C0C8E0 !important;
+}
+
+[data-baseweb="popover"] li:hover {
+    background: rgba(91, 127, 255, 0.12) !important;
+}
+
+/* ── Slider ──────────────────────────────────────────────────── */
+.stSlider > div > div > div > div {
+    background: #5B7FFF !important;
+}
+
+/* ── Checkbox ────────────────────────────────────────────────── */
+.stCheckbox label { color: #C0C8E0 !important; }
+
+/* ── Expanders ───────────────────────────────────────────────── */
+div[data-testid="stExpander"] {
+    background: rgba(30, 39, 73, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+}
+
+div[data-testid="stExpander"] summary {
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+
+div[data-testid="stExpander"] summary span {
+    color: #FFFFFF !important;
+}
+
+div[data-testid="stExpander"] .streamlit-expanderContent {
+    background: rgba(20, 28, 56, 0.4) !important;
+}
+
+/* ── Metrics ─────────────────────────────────────────────────── */
+[data-testid="stMetricValue"] {
+    font-size: 36px !important;
+    font-weight: 800 !important;
+    color: #FFFFFF !important;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #8B93B0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+}
+
+[data-testid="stMetricDelta"] {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+}
+
+[data-testid="metric-container"] {
+    background: rgba(30, 39, 73, 0.55) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+}
+
+/* ── Status Widget ───────────────────────────────────────────── */
+div[data-testid="stStatusWidget"] {
+    background: rgba(30, 39, 73, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 18px !important;
+}
+
+div[data-testid="stStatusWidget"] label,
+div[data-testid="stStatusWidget"] span {
+    color: #C0C8E0 !important;
+}
+
+/* ── Alerts ──────────────────────────────────────────────────── */
+div[data-testid="stAlert"] {
+    border-radius: 14px !important;
+    background: rgba(30, 39, 73, 0.45) !important;
+}
+
+/* ── Chat Messages ───────────────────────────────────────────── */
+[data-testid="stChatMessage"],
+.stChatMessage {
+    background: rgba(30, 39, 73, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 18px !important;
+    padding: 16px !important;
+    margin: 8px 0 !important;
+}
+
+[data-testid="stChatMessage"] p {
+    color: #C0C8E0 !important;
+}
+
+/* Chat Input */
+[data-testid="stChatInput"] textarea,
+.stChatInput textarea {
+    background: rgba(30, 39, 73, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    color: #FFFFFF !important;
+}
+
+[data-testid="stChatInput"] textarea:focus,
+.stChatInput textarea:focus {
+    border-color: #5B7FFF !important;
+    box-shadow: 0 0 0 3px rgba(91, 127, 255, 0.15) !important;
+}
+
+/* ── Agent Badge ─────────────────────────────────────────────── */
+.agent-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #FFFFFF !important;
+    margin-bottom: 6px;
+}
+
+/* ── Profile Badge (Sidebar) ─────────────────────────────────── */
+.profile-badge {
+    background: rgba(91, 127, 255, 0.1);
+    border: 1px solid rgba(91, 127, 255, 0.2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 0.8rem !important;
+    color: #8B93B0 !important;
+    margin-top: 6px;
+}
+
+/* ── Profile Cards ───────────────────────────────────────────── */
+.profile-card {
+    background: rgba(30, 39, 73, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+}
+
+.profile-card h4 {
+    margin: 0 0 4px 0 !important;
+    font-size: 11px !important;
+    color: #8B93B0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600 !important;
+}
+
+.profile-card .val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #FFFFFF !important;
+}
+
+/* ── Context Panel ───────────────────────────────────────────── */
+.context-tile {
+    background: rgba(25, 33, 63, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    padding: 20px;
+}
+
+.context-tile .ctx-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6B7394;
+    margin-bottom: 6px;
+}
+
+.context-tile .ctx-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #C0C8E0;
+    margin-bottom: 12px;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px !important;
+    background: transparent !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: rgba(30, 39, 73, 0.5) !important;
+    border-radius: 12px !important;
+    color: #8B93B0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    padding: 8px 18px !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: #5B7FFF !important;
+    color: #FFFFFF !important;
+    border-color: #5B7FFF !important;
+}
+
+.stTabs [data-baseweb="tab-highlight"] {
+    background: #5B7FFF !important;
+}
+
+/* ── Progress Bar ────────────────────────────────────────────── */
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, #5B7FFF 0%, #00D395 100%) !important;
+    border-radius: 8px !important;
+}
+
+.stProgress > div > div {
+    background: rgba(30, 39, 73, 0.4) !important;
+    border-radius: 8px !important;
+}
+
+/* ── Dataframes ──────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+}
+
+/* ── Forms ────────────────────────────────────────────────────── */
+[data-testid="stForm"] {
+    background: rgba(30, 39, 73, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+}
+
+/* ── Columns gap ─────────────────────────────────────────────── */
+[data-testid="stHorizontalBlock"] {
+    gap: 16px !important;
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+hr {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Tables (markdown) ───────────────────────────────────────── */
+table { border-collapse: collapse !important; }
+
+table th {
+    background: rgba(91, 127, 255, 0.12) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 10px 14px !important;
+}
+
+table td {
+    color: #C0C8E0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    padding: 10px 14px !important;
+    background: rgba(30, 39, 73, 0.25) !important;
+}
+
+/* ── Radio buttons ───────────────────────────────────────────── */
+.stRadio > div { gap: 4px !important; }
+
+.stRadio > div > label {
+    padding: 6px 12px !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+.stRadio > div > label:hover {
+    background: rgba(91, 127, 255, 0.08) !important;
+}
+
+/* ── Caption ─────────────────────────────────────────────────── */
+.stCaption, [data-testid="stCaption"] {
+    color: #4A5270 !important;
+}
+
+/* ── Links ───────────────────────────────────────────────────── */
+a { color: #5B7FFF !important; }
+a:hover { color: #7B9FFF !important; }
+
+/* ── Tooltip ─────────────────────────────────────────────────── */
+[data-testid="stTooltipIcon"] { color: #6B7394 !important; }
+
+/* ── Toast ───────────────────────────────────────────────────── */
+[data-testid="stToast"] {
+    background: #1A2040 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+}
+
+/* ── Custom Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: #070B1E; }
+::-webkit-scrollbar-thumb { background: rgba(91, 127, 255, 0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(91, 127, 255, 0.45); }
+
+/* ── Hide Streamlit branding ─────────────────────────────────── */
+#MainMenu { visibility: hidden !important; }
+footer { visibility: hidden !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes tileIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.tile-loading {
+    background: linear-gradient(
+        90deg,
+        rgba(30, 39, 73, 0.5) 0%,
+        rgba(91, 127, 255, 0.08) 50%,
+        rgba(30, 39, 73, 0.5) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+}
