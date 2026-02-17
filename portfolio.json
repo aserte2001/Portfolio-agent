@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "ticker": "RKLB",
+    "shares": 14.7,
+    "cost_basis_eur": 49.25,
+    "date_added": "2026-02-17"
+  },
+  {
+    "ticker": "ONDS",
+    "shares": 108.88,
+    "cost_basis_eur": 7.2,
+    "date_added": "2026-02-17"
+  },
+  {
+    "ticker": "TSLA",
+    "shares": 3.309,
+    "cost_basis_eur": 388.31,
+    "date_added": "2026-02-17"
+  },
+  {
+    "ticker": "KRKNF",
+    "shares": 218.38,
+    "cost_basis_eur": 3.72,
+    "date_added": "2026-02-17"
+  },
+  {
+    "ticker": "IROB.DE",
+    "shares": 39.85,
+    "cost_basis_eur": 24.44,
+    "date_added": "2026-02-17"
+  }
+]

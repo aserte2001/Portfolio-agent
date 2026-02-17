@@ -23,6 +23,10 @@ from chat_handler import (
     load_chat_history, save_chat_history, clear_chat_history,
     add_message, handle_chat_message, AGENT_META,
 )
+from currency_converter import (
+    usd_to_eur, format_eur, get_usd_to_eur_rate, is_using_fallback,
+    to_eur, detect_currency,
+)
 
 # ═══════════════════════════════════════════════════════════════════
 # LOGGING & PAGE CONFIG
@@ -70,24 +74,66 @@ if "chat_messages" not in st.session_state:
 # TILE HELPERS
 # ═══════════════════════════════════════════════════════════════════
 
-def get_current_price(ticker: str) -> float | None:
+def get_price_raw(ticker: str) -> tuple[float | None, str]:
+    """Fetch current price with multiple fallbacks.
+    Returns (price, native_currency) tuple.
+    The native_currency is auto-detected from yfinance info."""
+    native_currency = "USD"
     try:
         stock = yf.Ticker(ticker)
-        info = stock.info
-        price = info.get("regularMarketPrice") or info.get("currentPrice")
-        if price is None:
+
+        # Try to detect native currency early
+        try:
+            info = stock.info or {}
+            native_currency = detect_currency(info)
+        except Exception:
+            pass
+
+        try:
             price = getattr(stock.fast_info, "last_price", None)
-        return price
-    except Exception:
+            if price is not None and price > 0:
+                logger.info(f"[Price] {ticker}: {price:.2f} {native_currency} (fast_info)")
+                return round(price, 2), native_currency
+        except Exception:
+            pass
+
+        try:
+            info = stock.info or {}
+            native_currency = detect_currency(info)
+            price = info.get("regularMarketPrice") or info.get("currentPrice")
+            if price is not None and price > 0:
+                logger.info(f"[Price] {ticker}: {price:.2f} {native_currency} (info)")
+                return round(price, 2), native_currency
+        except Exception:
+            pass
+
+        try:
+            hist = stock.history(period="5d")
+            if hist is not None and not hist.empty and "Close" in hist.columns:
+                price = float(hist["Close"].dropna().iloc[-1])
+                if price > 0:
+                    logger.info(f"[Price] {ticker}: {price:.2f} {native_currency} (history)")
+                    return round(price, 2), native_currency
+        except Exception:
+            pass
+
+        logger.warning(f"[Price] {ticker}: all fallbacks failed")
+        return None, native_currency
+
+    except Exception as e:
+        logger.error(f"[Price] {ticker}: exception {e}")
+        return None, native_currency
+
+
+def get_current_price_eur(ticker: str) -> float | None:
+    """Fetch current price and convert to EUR if needed.
+    Automatically detects if the ticker already trades in EUR
+    and skips conversion in that case."""
+    price, native_currency = get_price_raw(ticker)
+    if price is None:
         return None
-
-
-def fmt_currency(value: float) -> str:
-    if abs(value) >= 1_000_000_000:
-        return f"${value / 1_000_000_000:.2f} Mrd."
-    if abs(value) >= 1_000_000:
-        return f"${value / 1_000_000:.2f} Mio."
-    return f"${value:,.2f}"
+    eur = to_eur(price, native_currency)
+    return round(eur, 2) if eur is not None else None
 
 
 def tile(icon: str, title: str, content: str, glow: str = "", extra_class: str = "") -> str:
@@ -121,14 +167,14 @@ def metric_tile(icon: str, title: str, value: str, color: str = "", sub: str = "
     )
 
 
-def holding_tile_html(ticker: str, shares: float, cost_basis: float,
-                      current_price: float | None) -> str:
-    """Render a single holding as a card tile."""
-    if current_price is not None:
-        current_val = shares * current_price
-        invested = shares * cost_basis
+def holding_tile_html(ticker: str, shares: float, cost_basis_eur: float,
+                      current_price_eur: float | None) -> str:
+    """Render a single holding as a card tile (all values already in EUR)."""
+    if current_price_eur is not None:
+        current_val = shares * current_price_eur
+        invested = shares * cost_basis_eur
         gain = current_val - invested
-        ret_pct = ((current_price - cost_basis) / cost_basis) * 100
+        ret_pct = ((current_price_eur - cost_basis_eur) / cost_basis_eur) * 100 if cost_basis_eur > 0 else 0
         ret_class = "pos" if ret_pct >= 0 else "neg"
         sign = "+" if ret_pct >= 0 else ""
         gain_sign = "+" if gain >= 0 else ""
@@ -137,23 +183,23 @@ def holding_tile_html(ticker: str, shares: float, cost_basis: float,
             f'<div class="ticker">{ticker}</div>'
             f'<div class="shares">{shares:.0f} Anteile</div>'
             f'<div class="price-row">'
-            f'<span class="current-val">${current_val:,.2f}</span>'
+            f'<span class="current-val">{format_eur(current_val)}</span>'
             f'<span class="return-pct {ret_class}">{sign}{ret_pct:.1f}%</span>'
             f'</div>'
             f'<div class="detail-row">'
-            f'<span>Einstand: ${cost_basis:.2f}</span>'
-            f'<span>Aktuell: ${current_price:.2f}</span>'
+            f'<span>Einstand: {format_eur(cost_basis_eur)}</span>'
+            f'<span>Aktuell: {format_eur(current_price_eur)}</span>'
             f'</div>'
             f'<div class="detail-row">'
-            f'<span>Investiert: ${invested:,.2f}</span>'
-            f'<span>{gain_sign}${gain:,.2f}</span>'
+            f'<span>Investiert: {format_eur(invested)}</span>'
+            f'<span>{gain_sign}{format_eur(abs(gain))}</span>'
             f'</div>'
             f'</div>'
         )
     return (
         f'<div class="holding-tile">'
         f'<div class="ticker">{ticker}</div>'
-        f'<div class="shares">{shares:.0f} Anteile @ ${cost_basis:.2f}</div>'
+        f'<div class="shares">{shares:.0f} Anteile @ {format_eur(cost_basis_eur)}</div>'
         f'<div class="price-row">'
         f'<span class="current-val" style="color:#8B93B0;">N/A</span>'
         f'</div>'
@@ -200,6 +246,18 @@ with st.sidebar:
             '<small>Gehe zu Anlageprofil</small></div>',
             unsafe_allow_html=True,
         )
+
+    st.markdown("---")
+
+    # Exchange rate display
+    rate = get_usd_to_eur_rate()
+    rate_label = "\u26a0\ufe0f geschaetzt" if is_using_fallback() else "live"
+    st.markdown(
+        f'<div style="font-size:12px;color:#4A5270;margin-top:4px;">'
+        f'\U0001f4b1 1 USD = {rate:.4f} EUR <small>({rate_label})</small>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
     st.markdown(
@@ -285,24 +343,25 @@ if page == "\U0001f4ca Aktie analysieren":
         # Metric tiles row
         try:
             qi = yf.Ticker(td).info
-            q_price = qi.get("regularMarketPrice") or qi.get("currentPrice", "N/A")
-            q_mcap = qi.get("marketCap", 0)
+            native_cur = detect_currency(qi)
+            q_price_raw = qi.get("regularMarketPrice") or qi.get("currentPrice")
+            q_mcap_raw = qi.get("marketCap", 0)
             q_pe = qi.get("trailingPE", "N/A")
             q_sector = qi.get("sector", "N/A")
-            q_52h = qi.get("fiftyTwoWeekHigh", "N/A")
-            q_52l = qi.get("fiftyTwoWeekLow", "N/A")
+            q_52h_raw = qi.get("fiftyTwoWeekHigh")
+            q_52l_raw = qi.get("fiftyTwoWeekLow")
 
             c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.markdown(
                     metric_tile("\U0001f4b0", "AKTUELLER KURS",
-                                f"${q_price}" if q_price != "N/A" else "N/A", "blue"),
+                                format_eur(to_eur(q_price_raw, native_cur)) if q_price_raw else "N/A", "blue"),
                     unsafe_allow_html=True,
                 )
             with c2:
                 st.markdown(
                     metric_tile("\U0001f3e6", "MARKTKAPITALISIERUNG",
-                                fmt_currency(q_mcap) if q_mcap else "N/A", "purple"),
+                                format_eur(to_eur(q_mcap_raw, native_cur)) if q_mcap_raw else "N/A", "purple"),
                     unsafe_allow_html=True,
                 )
             with c3:
@@ -322,13 +381,13 @@ if page == "\U0001f4ca Aktie analysieren":
             with r1:
                 st.markdown(
                     metric_tile("\U0001f4c9", "52W TIEF",
-                                f"${q_52l}" if q_52l != "N/A" else "N/A", "red"),
+                                format_eur(to_eur(q_52l_raw, native_cur)) if q_52l_raw else "N/A", "red"),
                     unsafe_allow_html=True,
                 )
             with r2:
                 st.markdown(
                     metric_tile("\U0001f4c8", "52W HOCH",
-                                f"${q_52h}" if q_52h != "N/A" else "N/A", "green"),
+                                format_eur(to_eur(q_52h_raw, native_cur)) if q_52h_raw else "N/A", "green"),
                     unsafe_allow_html=True,
                 )
         except Exception:
@@ -341,21 +400,31 @@ if page == "\U0001f4ca Aktie analysieren":
         # Add to portfolio tile
         st.markdown(
             tile("\U0001f4bc", f"{td} ins Portfolio aufnehmen",
-                 '<div class="tile-sub">Lege Anteile und Einstandskurs fest</div>'),
+                 '<div class="tile-sub">Lege Anteile und Kaufpreis in Euro fest</div>'),
             unsafe_allow_html=True,
         )
+        cp_now = get_current_price_eur(td)
+        if cp_now:
+            st.markdown(
+                f'<div style="color:#8B93B0;font-size:13px;margin-bottom:8px;">'
+                f'Aktueller Marktpreis: <b style="color:#5B7FFF;">{format_eur(cp_now)}</b></div>',
+                unsafe_allow_html=True,
+            )
         pc1, pc2, pc3 = st.columns(3)
         with pc1:
             add_shares = st.number_input("Anteile", min_value=0.01, value=10.0, step=1.0)
         with pc2:
-            cp = get_current_price(td)
-            add_cost = st.number_input("Einstandskurs ($)", min_value=0.01,
-                                       value=round(cp, 2) if cp else 10.0, step=0.01)
+            add_cost = st.number_input("Dein Kaufpreis pro Aktie (\u20ac)", min_value=0.01,
+                                       value=0.01, step=0.01,
+                                       help="Preis den du pro Aktie bezahlt hast in Euro")
         with pc3:
             st.markdown("<br>", unsafe_allow_html=True)
             if st.button(f"\u2795 {td} hinzufuegen", use_container_width=True):
-                msg = add_to_portfolio(td, add_shares, add_cost)
-                st.success(msg)
+                if add_cost <= 0.01:
+                    st.warning("Bitte gib deinen echten Kaufpreis in \u20ac ein.")
+                else:
+                    msg = add_to_portfolio(td, add_shares, add_cost)
+                    st.success(msg)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -390,14 +459,15 @@ elif page.startswith("\U0001f4bc Mein Portfolio"):
 
         progress = st.progress(0, text="Lade aktuelle Kurse...")
         for i, h in enumerate(portfolio):
-            t, s, cb = h["ticker"], h["shares"], h["cost_basis"]
-            ct = s * cb
-            cp = get_current_price(t)
+            t, s = h["ticker"], h["shares"]
+            cb_eur = h.get("cost_basis_eur", h.get("cost_basis", 0))
+            ct = s * cb_eur
+            cp = get_current_price_eur(t)
 
             if cp is not None:
                 cv = s * cp
                 gl = cv - ct
-                rp = ((cp - cb) / cb) * 100
+                rp = ((cp - cb_eur) / cb_eur) * 100 if cb_eur > 0 else 0
                 total_invested += ct
                 total_current += cv
                 if rp > best["return_pct"]:
@@ -410,8 +480,8 @@ elif page.startswith("\U0001f4bc Mein Portfolio"):
                 rp = 0
                 cp = None
 
-            holdings.append({"ticker": t, "shares": s, "cost_basis": cb,
-                             "current_price": cp, "value": cv,
+            holdings.append({"ticker": t, "shares": s, "cost_basis_eur": cb_eur,
+                             "current_price_eur": cp, "value": cv,
                              "gain": gl, "return_pct": rp})
             progress.progress((i + 1) / len(portfolio), text=f"{t} geladen...")
         progress.empty()
@@ -426,13 +496,13 @@ elif page.startswith("\U0001f4bc Mein Portfolio"):
         with c1:
             st.markdown(
                 metric_tile("\U0001f4b0", "PORTFOLIO-WERT",
-                            fmt_currency(total_current), "blue"),
+                            format_eur(total_current), "blue"),
                 unsafe_allow_html=True,
             )
         with c2:
             st.markdown(
                 metric_tile("\U0001f4c8", "GEWINN / VERLUST",
-                            f"{sign}{fmt_currency(total_gain)}", gain_color),
+                            f"{sign}{format_eur(abs(total_gain))}", gain_color),
                 unsafe_allow_html=True,
             )
         with c3:
@@ -466,7 +536,7 @@ elif page.startswith("\U0001f4bc Mein Portfolio"):
                             st.markdown(
                                 holding_tile_html(
                                     h["ticker"], h["shares"],
-                                    h["cost_basis"], h["current_price"],
+                                    h["cost_basis_eur"], h["current_price_eur"],
                                 ),
                                 unsafe_allow_html=True,
                             )
@@ -510,14 +580,17 @@ elif page.startswith("\U0001f4bc Mein Portfolio"):
             )
             nt = st.text_input("Ticker", placeholder="z.B. AAPL", key="new_ticker").upper().strip()
             ns = st.number_input("Anteile", min_value=0.01, value=10.0, step=1.0, key="new_shares")
-            nc = st.number_input("Kurs ($)", min_value=0.01, value=10.0, step=0.01, key="new_cost")
+            nc = st.number_input("Dein Kaufpreis (\u20ac)", min_value=0.01, value=0.01, step=0.01, key="new_cost",
+                                help="Preis den du pro Aktie bezahlt hast in Euro")
             if st.button("\u2795 Hinzufuegen", key="add_btn", use_container_width=True):
-                if nt:
+                if not nt:
+                    st.warning("Bitte gib einen Ticker ein.")
+                elif nc <= 0.01:
+                    st.warning("Bitte gib deinen echten Kaufpreis in \u20ac ein.")
+                else:
                     st.success(add_to_portfolio(nt, ns, nc))
                     time.sleep(0.5)
                     st.rerun()
-                else:
-                    st.warning("Bitte gib einen Ticker ein.")
         with m2:
             st.markdown(
                 tile("\U0001f5d1\ufe0f", "Aktie entfernen",
@@ -717,7 +790,7 @@ elif page == "\U0001f4ac Chat":
         if not st.session_state.chat_messages:
             st.markdown("### PROBIERE ZUM BEISPIEL")
             examples = [
-                "\U0001f50d Soll ich RKLB bei $8.50 kaufen?",
+                "\U0001f50d Soll ich RKLB bei \u20ac7,82 kaufen?",
                 "\u26a0\ufe0f Was sind die Risiken in meinem Portfolio?",
                 "\U0001f4f0 Gibt es aktuelle News zu AAPL?",
                 "\U0001f4ca Ist mein Portfolio zu konzentriert?",

@@ -167,9 +167,12 @@ def create_research_agent(model: str | None = None) -> Agent:
             "Du bist ein erfahrener Investment-Analyst mit ueber 15 Jahren Erfahrung an der Wall Street. "
             "Du bist spezialisiert auf die Identifikation von High-Growth-Chancen, insbesondere in den "
             "Bereichen Raumfahrttechnologie, Robotik, KI und aufstrebende Tech-Sektoren. Du hast ein "
-            "scharfes Auge fuer Micro-Cap-Wachstumsaktien unter $10 mit 10x-Potenzial und "
+            "scharfes Auge fuer Micro-Cap-Wachstumsaktien unter \u20ac10 mit 10x-Potenzial und "
             "konzentrierst dich auf 5-10 Jahre Anlagehorizont. Deine Analysen sind gruendlich, "
             "datenbasiert und bei Portfoliomanagern hoch angesehen. "
+            "Du analysierst fuer einen europaeischen Investor. "
+            "Alle Preise, Kursziele und Bewertungen MUESSEN in EURO (\u20ac) angegeben werden. "
+            "Die Tool-Daten sind bereits in EUR umgerechnet. "
             "Du antwortest immer auf Deutsch."
         ),
         tool_group="research",
@@ -193,6 +196,8 @@ def create_news_agent(model: str | None = None) -> Agent:
             "Du zeichnest dich darin aus, Signal von Rauschen zu trennen, wesentliche "
             "Informationen zu identifizieren und einzuschaetzen, wie Nachrichten die "
             "Anlegerstimmung und Aktienbewertungen beeinflussen. "
+            "Du analysierst fuer einen europaeischen Investor. "
+            "Alle Preise und Kursziele MUESSEN in EURO (\u20ac) angegeben werden. "
             "Du antwortest immer auf Deutsch."
         ),
         tool_group="news",
@@ -215,6 +220,9 @@ def create_portfolio_monitor_agent(model: str | None = None) -> Agent:
             "und Renditen, identifizierst Konzentrationsrisiken und schlaegst Rebalancing-Strategien "
             "vor. Du kommunizierst die Portfolio-Gesundheit in klaren, praegnanten Berichten, "
             "die Anlegern helfen, fundierte Entscheidungen zu treffen. "
+            "Du analysierst fuer einen europaeischen Investor. "
+            "Alle Portfolio-Werte, Gewinne und Verluste MUESSEN in EURO (\u20ac) angegeben werden. "
+            "Die Tool-Daten sind bereits in EUR umgerechnet. "
             "Du antwortest immer auf Deutsch."
         ),
         tool_group="portfolio",

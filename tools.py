@@ -13,6 +13,10 @@ from typing import Any
 import yfinance as yf
 
 from config import PORTFOLIO_PATH
+from currency_converter import (
+    usd_to_eur, format_eur, get_usd_to_eur_rate,
+    to_eur, detect_currency,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,58 +25,126 @@ logger = logging.getLogger(__name__)
 # RESEARCH AGENT TOOLS
 # ═══════════════════════════════════════════════════════════════════
 
+def _get_price_robust(stock: yf.Ticker, ticker: str) -> float | None:
+    """Get current price with multiple fallback strategies."""
+    # Strategy 1: fast_info
+    try:
+        price = getattr(stock.fast_info, "last_price", None)
+        if price is not None and price > 0:
+            return round(price, 2)
+    except Exception:
+        pass
+
+    # Strategy 2: info dict
+    try:
+        info = stock.info
+        price = info.get("regularMarketPrice") or info.get("currentPrice")
+        if price is not None and price > 0:
+            return round(price, 2)
+    except Exception:
+        pass
+
+    # Strategy 3: history (most reliable)
+    try:
+        hist = stock.history(period="5d")
+        if hist is not None and not hist.empty and "Close" in hist.columns:
+            price = float(hist["Close"].dropna().iloc[-1])
+            if price > 0:
+                return round(price, 2)
+    except Exception:
+        pass
+
+    logger.warning(f"_get_price_robust: all strategies failed for {ticker}")
+    return None
+
+
 def get_stock_data(ticker: str) -> str:
     """
     Fetch key financial data for a stock ticker.
     Returns price, market cap, PE ratio, sector, 52-week range, volume,
-    and other fundamental metrics.
+    and other fundamental metrics. Uses multiple fallback strategies.
+    Automatically detects the ticker's native currency and only converts
+    to EUR when necessary (e.g. USD tickers). EUR-denominated tickers
+    (like IROB.DE) are returned without conversion.
     """
     try:
-        stock = yf.Ticker(ticker.upper().strip())
-        info = stock.info
+        ticker = ticker.upper().strip()
+        stock = yf.Ticker(ticker)
 
-        if not info or info.get("regularMarketPrice") is None:
+        # Get price first with robust fallback
+        price = _get_price_robust(stock, ticker)
+
+        # Try to get full info
+        info = {}
+        try:
+            info = stock.info or {}
+        except Exception:
+            pass
+
+        # If info has no price, inject our robust price
+        if price is None:
+            price = info.get("regularMarketPrice") or info.get("currentPrice")
+
+        if price is None:
+            return json.dumps({"error": f"No price data found for '{ticker}'."})
+
+        # Detect native currency
+        native_currency = detect_currency(info)
+        is_native_eur = (native_currency == "EUR")
+
+        # Get market cap with fallback
+        market_cap = info.get("marketCap")
+        if not market_cap:
             try:
-                fast = stock.fast_info
-                price = getattr(fast, "last_price", None)
-                market_cap = getattr(fast, "market_cap", None)
+                market_cap = getattr(stock.fast_info, "market_cap", None)
             except Exception:
-                return json.dumps({"error": f"Could not retrieve data for '{ticker}'."})
+                market_cap = None
 
-            if price is None:
-                return json.dumps({"error": f"No data found for '{ticker}'."})
+        def _conv(val):
+            """Convert a value to EUR, respecting the native currency."""
+            if isinstance(val, (int, float)):
+                return round(to_eur(val, native_currency), 2)
+            return val
 
-            return json.dumps({
-                "ticker": ticker.upper(),
-                "price": round(price, 2),
-                "market_cap": market_cap,
-                "note": "Limited data available via fallback."
-            }, indent=2)
+        rate = get_usd_to_eur_rate()
+
+        price_eur = round(to_eur(price, native_currency), 2)
+
+        conversion_note = (
+            "Ticker notiert in EUR – keine Umrechnung noetig"
+            if is_native_eur
+            else f"Alle Preise von {native_currency} in EUR umgerechnet (Kurs: 1 USD = {rate:.4f} EUR)"
+        )
 
         data = {
-            "ticker": ticker.upper(),
-            "name": info.get("shortName", "N/A"),
-            "price": info.get("regularMarketPrice") or info.get("currentPrice", "N/A"),
-            "currency": info.get("currency", "USD"),
-            "market_cap": info.get("marketCap", "N/A"),
+            "ticker": ticker,
+            "name": info.get("shortName", ticker),
+            "price_eur": price_eur,
+            "price_native": price,
+            "native_currency": native_currency,
+            "currency": "EUR",
+            "exchange_rate": 1.0 if is_native_eur else round(rate, 4),
+            "needs_conversion": not is_native_eur,
+            "market_cap_eur": _conv(market_cap) if market_cap else "N/A",
             "pe_ratio": info.get("trailingPE", "N/A"),
             "forward_pe": info.get("forwardPE", "N/A"),
-            "eps": info.get("trailingEps", "N/A"),
+            "eps_eur": _conv(info.get("trailingEps")) if info.get("trailingEps") else "N/A",
             "sector": info.get("sector", "N/A"),
             "industry": info.get("industry", "N/A"),
-            "52_week_high": info.get("fiftyTwoWeekHigh", "N/A"),
-            "52_week_low": info.get("fiftyTwoWeekLow", "N/A"),
-            "50_day_avg": info.get("fiftyDayAverage", "N/A"),
-            "200_day_avg": info.get("twoHundredDayAverage", "N/A"),
+            "52_week_high_eur": _conv(info.get("fiftyTwoWeekHigh")) if info.get("fiftyTwoWeekHigh") else "N/A",
+            "52_week_low_eur": _conv(info.get("fiftyTwoWeekLow")) if info.get("fiftyTwoWeekLow") else "N/A",
+            "50_day_avg_eur": _conv(info.get("fiftyDayAverage")) if info.get("fiftyDayAverage") else "N/A",
+            "200_day_avg_eur": _conv(info.get("twoHundredDayAverage")) if info.get("twoHundredDayAverage") else "N/A",
             "volume": info.get("volume", "N/A"),
             "avg_volume": info.get("averageVolume", "N/A"),
             "dividend_yield": info.get("dividendYield", "N/A"),
             "beta": info.get("beta", "N/A"),
-            "revenue": info.get("totalRevenue", "N/A"),
+            "revenue_eur": _conv(info.get("totalRevenue")) if info.get("totalRevenue") else "N/A",
             "profit_margin": info.get("profitMargins", "N/A"),
             "debt_to_equity": info.get("debtToEquity", "N/A"),
             "return_on_equity": info.get("returnOnEquity", "N/A"),
-            "free_cash_flow": info.get("freeCashflow", "N/A"),
+            "free_cash_flow_eur": _conv(info.get("freeCashflow")) if info.get("freeCashflow") else "N/A",
+            "note": conversion_note,
         }
         return json.dumps(data, indent=2, default=str)
 
@@ -181,7 +253,9 @@ def get_portfolio_data() -> str:
 
 
 def calculate_returns() -> str:
-    """Calculate current returns for every holding in the portfolio."""
+    """Calculate current returns for every holding in the portfolio.
+    Automatically detects each ticker's native currency and only converts
+    to EUR when necessary."""
     try:
         with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
             portfolio = json.load(f)
@@ -196,25 +270,29 @@ def calculate_returns() -> str:
         for holding in portfolio:
             ticker = holding["ticker"]
             shares = holding["shares"]
-            cost_basis = holding["cost_basis"]
+            cost_basis_eur = holding.get("cost_basis_eur", holding.get("cost_basis", 0))
 
             try:
                 stock = yf.Ticker(ticker)
-                info = stock.info
-                current_price = info.get("regularMarketPrice") or info.get("currentPrice")
+                price_raw = _get_price_robust(stock, ticker)
 
-                if current_price is None:
-                    fast = stock.fast_info
-                    current_price = getattr(fast, "last_price", None)
-
-                if current_price is None:
+                if price_raw is None:
                     results.append({"ticker": ticker, "error": "Could not fetch price"})
                     continue
 
-                cost_total = shares * cost_basis
-                current_total = shares * current_price
+                # Detect native currency to avoid double conversion
+                info = {}
+                try:
+                    info = stock.info or {}
+                except Exception:
+                    pass
+                native_currency = detect_currency(info)
+
+                current_price_eur = to_eur(price_raw, native_currency)
+                cost_total = shares * cost_basis_eur
+                current_total = shares * current_price_eur
                 gain_loss = current_total - cost_total
-                return_pct = ((current_price - cost_basis) / cost_basis) * 100
+                return_pct = ((current_price_eur - cost_basis_eur) / cost_basis_eur) * 100 if cost_basis_eur > 0 else 0
 
                 total_cost += cost_total
                 total_current += current_total
@@ -222,11 +300,12 @@ def calculate_returns() -> str:
                 results.append({
                     "ticker": ticker,
                     "shares": shares,
-                    "cost_basis": round(cost_basis, 2),
-                    "current_price": round(current_price, 2),
-                    "cost_total": round(cost_total, 2),
-                    "current_total": round(current_total, 2),
-                    "gain_loss": round(gain_loss, 2),
+                    "cost_basis_eur": round(cost_basis_eur, 2),
+                    "current_price_eur": round(current_price_eur, 2),
+                    "native_currency": native_currency,
+                    "cost_total_eur": round(cost_total, 2),
+                    "current_total_eur": round(current_total, 2),
+                    "gain_loss_eur": round(gain_loss, 2),
                     "return_pct": round(return_pct, 2),
                 })
             except Exception as e:
@@ -237,12 +316,15 @@ def calculate_returns() -> str:
 
         return json.dumps({
             "holdings": results,
+            "currency": "EUR",
+            "exchange_rate": round(get_usd_to_eur_rate(), 4),
             "summary": {
-                "total_invested": round(total_cost, 2),
-                "total_current_value": round(total_current, 2),
-                "total_gain_loss": round(total_gain, 2),
+                "total_invested_eur": round(total_cost, 2),
+                "total_current_value_eur": round(total_current, 2),
+                "total_gain_loss_eur": round(total_gain, 2),
                 "total_return_pct": round(total_return_pct, 2),
             },
+            "note": "Alle Werte in EUR (automatische Waehrungserkennung aktiv)",
             "timestamp": datetime.now().isoformat(),
         }, indent=2)
 
@@ -352,26 +434,32 @@ def save_portfolio(portfolio: list[dict[str, Any]]) -> None:
         json.dump(portfolio, f, indent=2)
 
 
-def add_to_portfolio(ticker: str, shares: float, cost_basis: float) -> str:
-    """Add a stock to the portfolio or update an existing position."""
+def add_to_portfolio(ticker: str, shares: float, cost_basis_eur: float) -> str:
+    """Add a stock to the portfolio or update an existing position. Cost basis in EUR."""
     portfolio = load_portfolio()
     ticker = ticker.upper().strip()
 
     for holding in portfolio:
         if holding["ticker"] == ticker:
             old_shares = holding["shares"]
-            old_cost = holding["cost_basis"]
+            old_cost = holding.get("cost_basis_eur", holding.get("cost_basis", 0))
             new_total = old_shares + shares
-            holding["cost_basis"] = round(
-                (old_shares * old_cost + shares * cost_basis) / new_total, 4
+            holding["cost_basis_eur"] = round(
+                (old_shares * old_cost + shares * cost_basis_eur) / new_total, 4
             )
             holding["shares"] = new_total
+            holding.pop("cost_basis", None)
             save_portfolio(portfolio)
-            return f"Updated {ticker}: now {new_total} shares at avg cost ${holding['cost_basis']:.2f}"
+            return f"{ticker} aktualisiert: {new_total} Anteile zu \u20ac{holding['cost_basis_eur']:.2f} Durchschnitt"
 
-    portfolio.append({"ticker": ticker, "shares": shares, "cost_basis": round(cost_basis, 4)})
+    portfolio.append({
+        "ticker": ticker,
+        "shares": shares,
+        "cost_basis_eur": round(cost_basis_eur, 4),
+        "date_added": datetime.now().strftime("%Y-%m-%d"),
+    })
     save_portfolio(portfolio)
-    return f"Added {ticker}: {shares} shares at ${cost_basis:.2f}"
+    return f"{ticker} hinzugefuegt: {shares} Anteile zu \u20ac{cost_basis_eur:.2f}"
 
 
 def remove_from_portfolio(ticker: str) -> str:
@@ -380,6 +468,6 @@ def remove_from_portfolio(ticker: str) -> str:
     ticker = ticker.upper().strip()
     new_portfolio = [h for h in portfolio if h["ticker"] != ticker]
     if len(new_portfolio) == len(portfolio):
-        return f"{ticker} not found in portfolio."
+        return f"{ticker} nicht im Portfolio gefunden."
     save_portfolio(new_portfolio)
-    return f"Removed {ticker} from portfolio."
+    return f"{ticker} aus dem Portfolio entfernt."
